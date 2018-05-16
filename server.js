@@ -14,43 +14,37 @@ io.on('connection', function(socket){
     roomsArray['lobby'][userid] = socket.id;
     io.emit("sockets in lobby", roomsArray);
     if(roomsArray!='') {
-        socket.emit("server room created", roomsArray);
+        io.emit("server room created", roomsArray);
     }
+    
      socket.on('room message', function(data){
-        io.sockets.in(data.roomId).emit('chat message', data.message);
-        });
+       io.sockets.in(data.roomId).emit('chat message', data.message);
+    });
     socket.on("create room", function (data) {
         var id = data.roomId;
         socket.join(id);
-        
         socket.emit("show current room", id);
         if(!roomsArray[id]){
             if(roomsArray['lobby'][userid]==socket.id){
-                
-                delete roomsArray['lobby'][userid];
+                          delete roomsArray['lobby'][userid];
             }
             roomsArray[id] = {};
             roomsArray[id][userid] = socket.id;
         io.emit('server room created', roomsArray);
-        
         }else{
             io.emit('server room created', roomsArray);
         }
-        
-     } );
-   
+     });
      socket.on('disconnect', function(){
        for(key in roomsArray){
         for(roomdata in roomsArray[key]){
              if(roomsArray[key][roomdata]==socket.id){
                 delete roomsArray[key][roomdata];
-                console.log(roomsArray);
                }
             }
        }
        io.emit("server room created", roomsArray);   
     });
-
     socket.on("leave", function (data) {
         socket.broadcast.to(data.roomToLeave).emit('chat message', {
             leftstatus:1,
@@ -61,7 +55,7 @@ io.on('connection', function(socket){
              socket.join(data.joinRoomId);
              socket.emit('new room joined', data.joinRoomId);
          })
-         console.log(roomsArray);
+         io.emit("server room created", roomsArray);
          });
         socket.on("left", function(data) {
             for(key in roomsArray[data.group]){
@@ -70,12 +64,12 @@ io.on('connection', function(socket){
                      delete roomsArray[data.group][key];
                    }
                 }
-                console.log(roomsArray);
+                socket.leave(data.group);
+                io.emit("server room created", roomsArray);
              });
-         
+        
 });
 function createOrLeaveSocket(roomsArray, leave, join, user, socket){
-    
     if(leave==''){
     if(roomsArray['lobby'][user]==socket){
        delete roomsArray['lobby'][user];
