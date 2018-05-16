@@ -1,0 +1,126 @@
+<!doctype html>
+<html>
+<head>
+    <title>Socket.IO chat</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font: 13px Helvetica, Arial; }
+        form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
+        form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
+        form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
+        #messages { list-style-type: none; margin: 0; padding: 0; }
+        #messages li { padding: 5px 10px; }
+        #messages li:nth-child(odd) { background: #eee; }
+    </style>
+</head>
+<body>
+<div id="room" style="margin-left: 600px">
+    <h2>Create new room</h2>
+    <br>
+    <p id="room-name"></p>
+    <input type="text" id="room-id" class="form-control" >
+<button id="leave-group">Leave</button>
+</div>
+<h3>Available Rooms:</h3>
+<div id="rooms-list">
+  
+</div>
+<div id="roomsInfo"></div>
+
+
+<ul id="messages" style="margin-top: 10px">
+    <h3>Messages:</h3>
+</ul>
+
+
+<form action="">
+    <input id="m" autocomplete="off" /><button>Send to <span id="room-span"></span></button>
+</form>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+<script>
+    $(function () {
+       var socket = io();
+       $('form').submit(function(){
+            var message = $('#m').val();
+            if(!message){
+                return false;
+            }
+            else {
+                room = $('#room-id').val();
+                socket.emit('room message', {
+                    roomId: room,
+                    message: message
+                });
+            }
+            $('#m').val('');
+            return false;
+        });
+        socket.on('chat message', function(data){
+            console.log(data);
+            if(data.leftstatus==1){
+                $('#messages').append($('<li>').text(data.id + " left the room"));
+            } else {
+                $('#messages').append($('<li>').text(data));
+            }
+            });
+         document.getElementById("leave-group").addEventListener("click", function() {
+            socket.emit("left", {
+                id:socket.id,
+                group:$('#room-id').val()
+            }) 
+         });  
+        document.getElementById("room-id").onkeyup = function (e) {
+            if (e.keyCode != 13) return;
+            $('#messages').empty();
+
+           socket.emit("create room", {
+               roomId: (this).value
+               });
+               
+       }
+       socket.on("sockets in lobby", function(data) {
+           var html ='';
+           var roomname = '';
+        for(room_name in data){
+           
+             for(res in data[room_name]){
+                    html += '<h3>socket of </h3> '+ room_name+ '<p>user id : '+ res+ '  socket id :'+ data[room_name][res] +'</p>'; 
+                     }      
+            }
+            
+        $('#roomsInfo').html(html);
+           
+        });
+        socket.on("server room created", function (data) {
+           console.log(data);
+           var html = '';
+           for (rooms in data){
+               html +='<button id="room-btn">'+rooms+'</button><br><br>';
+           }
+           $('#rooms-list').html(html);
+       });
+        socket.on("show current room", function (data) {
+            $('#room-span').text(data);
+       });
+        $("body").on("click","#room-btn", function(){
+            $('#messages').empty();
+            socket.emit("leave", {
+                roomToLeave: $('#room-id').val(),
+                joinRoomId:$(this).text(),
+                id:socket.id
+            });
+            $('#room-span').text($(this).text());
+        });
+        socket.on("new room joined", function (data) {
+            $('#room-id').val(data);
+            $('#room-span').text(data);
+        });
+    });
+
+</script>
+
+</body>
+
+</html>
